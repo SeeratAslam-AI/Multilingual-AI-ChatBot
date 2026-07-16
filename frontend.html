@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SafeX Solutions — Assistant &amp; Insights</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --navy-900:#0B2545;
+    --navy-800:#123A63;
+    --navy-050:#EEF3F8;
+    --teal-500:#14B8A6;
+    --teal-050:#E4FBF7;
+    --amber-500:#F2A93B;
+    --amber-050:#FDF3E2;
+    --coral-500:#E4572E;
+    --coral-050:#FCE9E3;
+    --bg:#F5F7FA;
+    --surface:#FFFFFF;
+    --text-900:#10202F;
+    --text-500:#5B7083;
+    --border:#E1E7EC;
+    --radius:14px;
+    --font-display:'Sora', sans-serif;
+    --font-body:'Inter', sans-serif;
+    --font-mono:'JetBrains Mono', monospace;
+  }
+
+  @font-face{ font-family:'Sora'; src:local('Sora'); }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    font-family:var(--font-body);
+    background:var(--bg);
+    color:var(--text-900);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------------- Header ---------------- */
+  .topbar{
+    background:var(--navy-900);
+    color:#fff;
+    padding:16px 28px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .brand-mark{
+    width:34px; height:34px;
+    border-radius:9px;
+    background:linear-gradient(135deg, var(--teal-500), var(--navy-800));
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:15px;
+    color:#fff;
+    flex-shrink:0;
+  }
+  .brand-text{ font-family:var(--font-display); }
+  .brand-text .name{ font-weight:700; font-size:17px; letter-spacing:0.2px; }
+  .brand-text .tag{ font-size:11.5px; color:#AFC3D8; letter-spacing:0.4px; }
+
+  .tabs{
+    display:flex;
+    background:rgba(255,255,255,0.08);
+    border-radius:999px;
+    padding:4px;
+    gap:2px;
+  }
+  .tab-btn{
+    border:none;
+    background:transparent;
+    color:#D6E3EF;
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:13.5px;
+    padding:9px 20px;
+    border-radius:999px;
+    cursor:pointer;
+    transition:background 0.18s ease, color 0.18s ease;
+  }
+  .tab-btn.active{
+    background:var(--teal-500);
+    color:#04211D;
+  }
+  .status-chip{
+    font-size:11.5px;
+    font-family:var(--font-mono);
+    padding:6px 10px;
+    border-radius:999px;
+    background:rgba(255,255,255,0.08);
+    color:#AFC3D8;
+    display:flex; align-items:center; gap:6px;
+  }
+  .status-dot{ width:7px; height:7px; border-radius:50%; background:#7A8CA0; }
+  .status-dot.live{ background:var(--teal-500); box-shadow:0 0 0 3px rgba(20,184,166,0.25); }
+  .status-dot.down{ background:var(--coral-500); box-shadow:0 0 0 3px rgba(228,87,46,0.25); }
+
+  /* ---------------- Layout ---------------- */
+  .view{ display:none; padding:28px; max-width:1180px; margin:0 auto; }
+  .view.active{ display:block; }
+
+  /* ---------------- Chat View ---------------- */
+  .chat-shell{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    max-width:760px;
+    margin:0 auto;
+    display:flex;
+    flex-direction:column;
+    height:70vh;
+    min-height:520px;
+    overflow:hidden;
+    box-shadow:0 1px 3px rgba(11,37,69,0.06);
+  }
+  .chat-header{
+    padding:16px 20px;
+    border-bottom:1px solid var(--border);
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:15px;
+    color:var(--navy-900);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .chat-header span.sub{
+    font-family:var(--font-body);
+    font-weight:400;
+    font-size:12.5px;
+    color:var(--text-500);
+    display:block;
+    margin-top:2px;
+  }
+  .messages{
+    flex:1;
+    overflow-y:auto;
+    padding:20px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .msg-row{ display:flex; }
+  .msg-row.user{ justify-content:flex-end; }
+  .msg-row.bot{ justify-content:flex-start; }
+
+  .bubble{
+    max-width:78%;
+    padding:12px 15px;
+    border-radius:16px;
+    font-size:14.5px;
+    line-height:1.5;
+  }
+  .msg-row.user .bubble{
+    background:var(--navy-900);
+    color:#fff;
+    border-bottom-right-radius:4px;
+  }
+  .msg-row.bot .bubble{
+    background:var(--navy-050);
+    color:var(--text-900);
+    border-bottom-left-radius:4px;
+    border-left:3px solid var(--text-500);
+  }
+  .msg-row.bot .bubble.tier-answered{ border-left-color:var(--teal-500); }
+  .msg-row.bot .bubble.tier-hedged{ border-left-color:var(--amber-500); }
+  .msg-row.bot .bubble.tier-fallback{ border-left-color:var(--coral-500); }
+
+  .bubble-meta{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:9px;
+  }
+  .lang-chip{
+    font-family:var(--font-mono);
+    font-size:10px;
+    padding:2px 7px;
+    border-radius:6px;
+    background:#fff;
+    border:1px solid var(--border);
+    color:var(--text-500);
+    text-transform:uppercase;
+  }
+  .tier-label{
+    font-size:11px;
+    font-weight:600;
+  }
+  .tier-answered .tier-label{ color:#0C7A6B; }
+  .tier-hedged .tier-label{ color:#A9761F; }
+  .tier-fallback .tier-label{ color:#B8421F; }
+
+  .confidence-track{
+    margin-top:7px;
+    height:4px;
+    width:100%;
+    background:#DCE6EE;
+    border-radius:3px;
+    overflow:hidden;
+  }
+  .confidence-fill{ height:100%; border-radius:3px; }
+  .tier-answered .confidence-fill{ background:var(--teal-500); }
+  .tier-hedged .confidence-fill{ background:var(--amber-500); }
+  .tier-fallback .confidence-fill{ background:var(--coral-500); }
+
+  .typing{
+    display:flex; gap:4px; padding:12px 15px;
+  }
+  .typing span{
+    width:6px; height:6px; border-radius:50%;
+    background:var(--text-500); opacity:0.5;
+    animation:blink 1.1s infinite ease-in-out;
+  }
+  .typing span:nth-child(2){ animation-delay:0.15s; }
+  .typing span:nth-child(3){ animation-delay:0.3s; }
+  @keyframes blink{ 0%,80%,100%{opacity:0.3;} 40%{opacity:1;} }
+
+  .composer{
+    border-top:1px solid var(--border);
+    padding:14px 16px;
+    display:flex;
+    gap:10px;
+  }
+  .composer input{
+    flex:1;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px 14px;
+    font-family:var(--font-body);
+    font-size:14px;
+    outline:none;
+    background:#FBFCFD;
+  }
+  .composer input:focus{ border-color:var(--teal-500); background:#fff; }
+  .composer button{
+    background:var(--navy-900);
+    color:#fff;
+    border:none;
+    border-radius:10px;
+    padding:0 20px;
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+    transition:background 0.15s ease;
+  }
+  .composer button:hover{ background:var(--navy-800); }
+  .composer button:disabled{ opacity:0.5; cursor:default; }
+  .hint{
+    text-align:center;
+    font-size:12px;
+    color:var(--text-500);
+    margin-top:10px;
+  }
+
+  /* ---------------- Dashboard View ---------------- */
+  .stat-grid{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:14px;
+    margin-bottom:22px;
+  }
+  .stat-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px 18px;
+  }
+  .stat-card .label{ font-size:12px; color:var(--text-500); font-weight:600; letter-spacing:0.2px; }
+  .stat-card .value{ font-family:var(--font-display); font-size:26px; font-weight:700; margin-top:6px; color:var(--navy-900); }
+  .stat-card.answered .value{ color:#0C7A6B; }
+  .stat-card.hedged .value{ color:#A9761F; }
+  .stat-card.fallback .value{ color:#B8421F; }
+
+  .chart-grid{
+    display:grid;
+    grid-template-columns:1.3fr 1fr;
+    gap:16px;
+    margin-bottom:16px;
+  }
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:18px 20px;
+  }
+  .panel h3{
+    font-family:var(--font-display);
+    font-size:15px;
+    margin:0 0 14px 0;
+    color:var(--navy-900);
+  }
+  .panel h3 .sub{ display:block; font-family:var(--font-body); font-weight:400; font-size:12px; color:var(--text-500); margin-top:2px; }
+  .chart-wrap{ height:280px; position:relative; }
+
+  table.fallback-table{ width:100%; border-collapse:collapse; font-size:13px; }
+  table.fallback-table th{
+    text-align:left; font-size:11.5px; color:var(--text-500);
+    text-transform:uppercase; letter-spacing:0.3px;
+    padding:8px 10px; border-bottom:1px solid var(--border);
+  }
+  table.fallback-table td{
+    padding:10px 10px; border-bottom:1px solid var(--border);
+    vertical-align:top;
+  }
+  table.fallback-table tr:last-child td{ border-bottom:none; }
+  .lang-pill{
+    font-family:var(--font-mono); font-size:10px; padding:2px 6px;
+    border-radius:5px; background:var(--coral-050); color:#B8421F;
+  }
+  .empty-note{ color:var(--text-500); font-size:13px; padding:10px 2px; }
+
+  @media (max-width: 880px){
+    .stat-grid{ grid-template-columns:repeat(2,1fr); }
+    .chart-grid{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">SX</div>
+    <div class="brand-text">
+      <div class="name">SafeX Solutions</div>
+      <div class="tag">AI ASSISTANT &amp; INSIGHTS</div>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" data-view="chat">Chat</button>
+    <button class="tab-btn" data-view="dashboard">Dashboard</button>
+  </div>
+  <div class="status-chip"><span class="status-dot" id="statusDot"></span><span id="statusText">Checking backend…</span></div>
+</div>
+
+<!-- ============= CHAT VIEW ============= -->
+<div class="view active" id="view-chat">
+  <div class="chat-shell">
+    <div class="chat-header">
+      <div>
+        SafeX Assistant
+        <span class="sub">Ask in English or Roman Urdu — services, pricing, contact, aur bhi bahut kuch</span>
+      </div>
+    </div>
+    <div class="messages" id="messages"></div>
+    <div class="composer">
+      <input id="chatInput" type="text" placeholder="Type your question… / Apna sawal likhein…" autocomplete="off" />
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
+  <div class="hint">Bot replies are color-coded: teal = confident answer, amber = closest match (not fully sure), coral = couldn't find an answer.</div>
+</div>
+
+<!-- ============= DASHBOARD VIEW ============= -->
+<div class="view" id="view-dashboard">
+  <div class="stat-grid">
+    <div class="stat-card"><div class="label">Total Queries</div><div class="value" id="statTotal">–</div></div>
+    <div class="stat-card answered"><div class="label">Answered Confidently</div><div class="value" id="statAnswered">–</div></div>
+    <div class="stat-card hedged"><div class="label">Hedged Answers</div><div class="value" id="statHedged">–</div></div>
+    <div class="stat-card fallback"><div class="label">Fallback / Unanswered</div><div class="value" id="statFallback">–</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="panel">
+      <h3>Top Asked Questions<span class="sub">Most frequent user questions, exact wording</span></h3>
+      <div class="chart-wrap"><canvas id="topQuestionsChart"></canvas></div>
+    </div>
+    <div class="panel">
+      <h3>Service Interest<span class="sub">Which category gets the most questions</span></h3>
+      <div class="chart-wrap"><canvas id="categoryChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Fallback / Unanswered Queries<span class="sub">Questions the bot couldn't confidently answer — useful for expanding the FAQ dataset</span></h3>
+    <div id="fallbackTableWrap"></div>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------
+// CONFIG — point this at your running Module 3 backend.
+// If it's unreachable, the UI falls back to demo/mock data so the
+// interface can still be shown/tested standalone.
+// ---------------------------------------------------------------
+const API_BASE = "http://127.0.0.1:8000";
+let backendLive = false;
+
+const MOCK_SUMMARY = {
+  total_queries: 14, answered_count: 11, hedged_count: 1, fallback_count: 2,
+  top_questions: [
+    { question: "what services does safex offer?", times_asked: 3 },
+    { question: "safex ki qeemat kya hai for a website?", times_asked: 1 },
+    { question: "kya safex solutions cybersecurity services deti hai?", times_asked: 1 },
+    { question: "cyber security ka kaam karte hain aap?", times_asked: 1 },
+    { question: "office kis waqt khulta hai", times_asked: 1 },
+  ],
+  category_interest: [
+    { category: "General / Company", query_count: 3 },
+    { category: "Cybersecurity", query_count: 2 },
+    { category: "Pricing", query_count: 1 },
+    { category: "Contact", query_count: 1 },
+    { category: "Digital Marketing", query_count: 1 },
+  ],
+  fallback_queries: [
+    { user_question: "asdkjaslkdj random gibberish text", detected_language: "en", confidence: 0, timestamp: new Date().toISOString() },
+    { user_question: "zzz123 blah blah nonsense", detected_language: "en", confidence: 0, timestamp: new Date().toISOString() },
+  ],
+};
+
+// ---------------------------------------------------------------
+// Tabs
+// ---------------------------------------------------------------
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("view-" + btn.dataset.view).classList.add("active");
+    if (btn.dataset.view === "dashboard") loadDashboard();
+  });
+});
+
+// ---------------------------------------------------------------
+// Backend status check
+// ---------------------------------------------------------------
+async function checkBackend() {
+  const dot = document.getElementById("statusDot");
+  const text = document.getElementById("statusText");
+  try {
+    const res = await fetch(API_BASE + "/", { method: "GET" });
+    if (!res.ok) throw new Error("bad status");
+    backendLive = true;
+    dot.className = "status-dot live";
+    text.textContent = "Connected to backend";
+  } catch (e) {
+    backendLive = false;
+    dot.className = "status-dot down";
+    text.textContent = "Backend offline — showing demo data";
+  }
+}
+
+// ---------------------------------------------------------------
+// Chat logic
+// ---------------------------------------------------------------
+const messagesEl = document.getElementById("messages");
+const inputEl = document.getElementById("chatInput");
+const sendBtn = document.getElementById("sendBtn");
+
+function addUserMessage(text) {
+  const row = document.createElement("div");
+  row.className = "msg-row user";
+  row.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
+  messagesEl.appendChild(row);
+  scrollToBottom();
+}
+
+function addTypingIndicator() {
+  const row = document.createElement("div");
+  row.className = "msg-row bot";
+  row.id = "typingRow";
+  row.innerHTML = `<div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  messagesEl.appendChild(row);
+  scrollToBottom();
+}
+
+function removeTypingIndicator() {
+  const el = document.getElementById("typingRow");
+  if (el) el.remove();
+}
+
+function tierLabel(type) {
+  if (type === "answered") return "Confident answer";
+  if (type === "hedged") return "Closest match — not fully sure";
+  return "Couldn't find an answer";
+}
+
+function addBotMessage(result) {
+  const tier = result.response_type || "fallback";
+  const confidencePct = Math.round((result.confidence || 0) * 100);
+  const row = document.createElement("div");
+  row.className = "msg-row bot";
+  row.innerHTML = `
+    <div class="bubble tier-${tier}">
+      <div>${escapeHtml(result.final_response)}</div>
+      <div class="bubble-meta">
+        <span class="lang-chip">${result.detected_language === "ur" ? "Roman Urdu" : "English"}</span>
+        <span class="tier-label">${tierLabel(tier)}</span>
+      </div>
+      <div class="confidence-track"><div class="confidence-fill" style="width:${confidencePct}%"></div></div>
+    </div>
+  `;
+  messagesEl.appendChild(row);
+  scrollToBottom();
+}
+
+function scrollToBottom() {
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+async function sendMessage() {
+  const text = inputEl.value.trim();
+  if (!text) return;
+  inputEl.value = "";
+  sendBtn.disabled = true;
+  addUserMessage(text);
+  addTypingIndicator();
+
+  try {
+    const res = await fetch(API_BASE + "/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text }),
+    });
+    if (!res.ok) throw new Error("Request failed");
+    const data = await res.json();
+    removeTypingIndicator();
+    addBotMessage(data);
+  } catch (err) {
+    removeTypingIndicator();
+    addBotMessage({
+      final_response: "Mujhe backend se connect nahi ho pa raha. Please make sure the Module 3 API (uvicorn main:app) is running at " + API_BASE + ".",
+      detected_language: "en",
+      confidence: 0,
+      response_type: "fallback",
+    });
+  } finally {
+    sendBtn.disabled = false;
+    inputEl.focus();
+  }
+}
+
+sendBtn.addEventListener("click", sendMessage);
+inputEl.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
+
+// Welcome message
+addBotMessage({
+  final_response: "Assalam-o-Alaikum! Main SafeX Solutions ka assistant hoon. Aap mujhse services, pricing, contact ya kisi bhi cheez ke baare mein English ya Roman Urdu mein pooch sakte hain.",
+  detected_language: "ur",
+  confidence: 1,
+  response_type: "answered",
+});
+
+// ---------------------------------------------------------------
+// Dashboard logic
+// ---------------------------------------------------------------
+let topQuestionsChartInstance = null;
+let categoryChartInstance = null;
+let dashboardLoaded = false;
+
+async function fetchSummary() {
+  try {
+    const res = await fetch(API_BASE + "/analytics/summary");
+    if (!res.ok) throw new Error("bad status");
+    return await res.json();
+  } catch (e) {
+    return MOCK_SUMMARY;
+  }
+}
+
+async function loadDashboard() {
+  const summary = await fetchSummary();
+
+  document.getElementById("statTotal").textContent = summary.total_queries;
+  document.getElementById("statAnswered").textContent = summary.answered_count;
+  document.getElementById("statHedged").textContent = summary.hedged_count;
+  document.getElementById("statFallback").textContent = summary.fallback_count;
+
+  renderTopQuestionsChart(summary.top_questions || []);
+  renderCategoryChart(summary.category_interest || []);
+  renderFallbackTable(summary.fallback_queries || []);
+}
+
+function renderTopQuestionsChart(data) {
+  const ctx = document.getElementById("topQuestionsChart").getContext("2d");
+  const labels = data.map(d => d.question.length > 38 ? d.question.slice(0, 38) + "…" : d.question);
+  const values = data.map(d => d.times_asked);
+
+  if (topQuestionsChartInstance) topQuestionsChartInstance.destroy();
+  topQuestionsChartInstance = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: "#14B8A6",
+        borderRadius: 6,
+        maxBarThickness: 28,
+      }],
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, ticks: { precision: 0, color: "#5B7083" }, grid: { color: "#EEF3F8" } },
+        y: { ticks: { color: "#10202F", font: { size: 11.5 } }, grid: { display: false } },
+      },
+    },
+  });
+}
+
+function renderCategoryChart(data) {
+  const ctx = document.getElementById("categoryChart").getContext("2d");
+  const labels = data.map(d => d.category);
+  const values = data.map(d => d.query_count);
+  const palette = ["#0B2545", "#14B8A6", "#F2A93B", "#5B7083", "#8FB8D9", "#E4572E", "#123A63", "#7FD9CE"];
+
+  if (categoryChartInstance) categoryChartInstance.destroy();
+  categoryChartInstance = new Chart(ctx, {
+    type: "pie",
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: labels.map((_, i) => palette[i % palette.length]),
+        borderColor: "#fff",
+        borderWidth: 2,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 }, color: "#10202F" } },
+      },
+    },
+  });
+}
+
+function renderFallbackTable(rows) {
+  const wrap = document.getElementById("fallbackTableWrap");
+  if (!rows.length) {
+    wrap.innerHTML = `<div class="empty-note">No fallback queries yet — every question so far has been answered or hedged.</div>`;
+    return;
+  }
+  const body = rows.map(r => `
+    <tr>
+      <td>${escapeHtml(r.user_question)}</td>
+      <td><span class="lang-pill">${r.detected_language === "ur" ? "UR" : "EN"}</span></td>
+      <td>${(r.confidence * 100).toFixed(0)}%</td>
+      <td>${new Date(r.timestamp).toLocaleString()}</td>
+    </tr>
+  `).join("");
+  wrap.innerHTML = `
+    <table class="fallback-table">
+      <thead><tr><th>Question</th><th>Language</th><th>Confidence</th><th>Time</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>
+  `;
+}
+
+// ---------------------------------------------------------------
+// Init
+// ---------------------------------------------------------------
+checkBackend();
+</script>
+</body>
+</html>
